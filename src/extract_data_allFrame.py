@@ -18,11 +18,13 @@ class ExtractedData:
         self.no_component = None
         self.wv_psd_path = os.path.join(self.convert_file_pth, "wavevector_psd.csv")
         self.wv_psd_perfect_path = os.path.join(self.convert_file_pth, "wavevector_psd_perfect.csv")
+        self.rms_path = os.path.join(self.convert_file_pth, "rms.csv")
         if self.__is_wv_psd_file_exit() is True and rerun is False:
             self.af_wv_psd = np.genfromtxt(self.wv_psd_path, delimiter=",")
             self.af_wv_psd_perfect = np.genfromtxt(self.wv_psd_perfect_path, delimiter=",")
+            self.rms = np.genfromtxt(self.rms_path, delimiter=",")
         else:
-            self.af_wv_psd, self.af_wv_psd_perfect = self.extract_data()
+            self.af_wv_psd, self.af_wv_psd_perfect, self.rms = self.extract_data()
 
         print("This data contains {} groups,\n"
               "{} segments in total,\n"
@@ -39,7 +41,7 @@ class ExtractedData:
             return False
 
     @staticmethod
-    def __save_file(data, path):
+    def save_csv_file(data, path):
         # Save "data" in csv format into "path"
         np.savetxt(path, data, delimiter=",")
 
@@ -48,6 +50,7 @@ class ExtractedData:
         st_wth_name_con = self.file_suffix + "{}.csv"
         af_wv_psd = np.array([])
         af_wv_psd_perfect = np.array([])
+        rms = np.array([])
         for frame in range(no_frame):
             # Load file:
             convert_file = os.path.join(self.convert_file_pth, st_wth_name_con)
@@ -64,16 +67,28 @@ class ExtractedData:
             group_wavevector_psd, group_wavevector_psd_perfect = group_segment.cal_wavevector_psd()
             af_wv_psd = np.append(af_wv_psd, group_wavevector_psd)
             af_wv_psd_perfect = np.append(af_wv_psd_perfect, group_wavevector_psd_perfect)
+
+            # Calculate root mean square
+            group_rms = group_segment.cal_root_mean_square()
+            rms = np.append(rms, group_rms)
+
             if self.no_component is None:
                 self.no_component = group_segment.no_component
 
         af_wv_psd = af_wv_psd.reshape(no_frame, -1)
         af_wv_psd = np.mean(af_wv_psd, axis=0)
+        af_wv_psd = af_wv_psd.reshape(-1, self.no_component).T
+
         af_wv_psd_perfect = af_wv_psd_perfect.reshape(no_frame, -1)
         af_wv_psd_perfect = np.mean(af_wv_psd_perfect, axis=0)
-        af_wv_psd = af_wv_psd.reshape(-1, self.no_component).T
         af_wv_psd_perfect = af_wv_psd_perfect.reshape(-1, self.no_component).T
-        self.__save_file(af_wv_psd, self.wv_psd_path)
-        self.__save_file(af_wv_psd_perfect, self.wv_psd_perfect_path)
 
-        return af_wv_psd, af_wv_psd_perfect
+        rms = rms.reshape(no_frame, -1)
+        rms = np.mean(rms, axis=0)
+        rms = rms.reshape(-1, self.no_component - 1).T
+
+        self.save_csv_file(af_wv_psd, self.wv_psd_path)
+        self.save_csv_file(af_wv_psd_perfect, self.wv_psd_perfect_path)
+        self.save_csv_file(rms, self.rms_path)
+
+        return af_wv_psd, af_wv_psd_perfect, rms

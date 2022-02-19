@@ -48,7 +48,7 @@ class GroupSegments:
             idx_start = idx_split + 1
         if len(lst_segment) == 0:
             raise RuntimeError("There is no segments after filtering, please check again the lower threshold length")
-        print(len(lst_segment))
+        print('Number of segments: ', len(lst_segment))
         return lst_segment
 
     def __grouping_sorting(self):
@@ -117,3 +117,26 @@ class GroupSegments:
             group_wv_psd_perfect.append((wavevectors_perfect[idx_perfect], psd_perfect[idx_perfect]))
 
         return group_wv_psd, group_wv_psd_perfect
+
+    def cal_root_mean_square(self):
+        group_rms = list()
+        a = 1
+        for one_group in self.group_segment:
+            segments_rms = list()
+            for one_segment in one_group:
+                one_segment_rms = list()
+                one_segment_yy = list()
+                x_array = one_segment[:, 0]
+                y_array = one_segment[:, 1]
+                grid_spacing = y_array[1] - y_array[0]
+                for i in range(a, self.no_component):
+                    accum_val = 0.0
+                    for j in range(0, self.no_component - i):
+                        first_term = x_array[j + 1]
+                        second_term = x_array[j]
+                        accum_val += abs(first_term - second_term)
+                    one_segment_rms.append(accum_val/(self.no_component - i))
+                    one_segment_yy.append(i * grid_spacing)
+                segments_rms.append((one_segment_rms, one_segment_yy))
+            group_rms.append(segments_rms)
+        return group_rms

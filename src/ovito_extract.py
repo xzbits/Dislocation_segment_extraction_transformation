@@ -98,7 +98,7 @@ class DumpDirectory:
             # File name with Time
             return r"_(\d+).cfg"
         else:
-            return None
+            raise RuntimeError("Cannot identify regular expresion term for this {} file".format(file_name))
 
     def extract_temperature_list(self):
         output_list = list()
@@ -231,7 +231,7 @@ class DumpDirectory:
                     save_path = os.path.join(self.save_path, "extracted_data", "t_{}".format(temp))
                     self.extract_pipeline(pipelines_path, save_path)
             else:
-                RuntimeError("Please put temperature_desire into list object")
+                raise RuntimeError("Please set temperature_desire type is list object")
 
     def create_dir(self):
         # Create extracted_data directory
