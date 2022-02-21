@@ -24,7 +24,7 @@ class ExtractedData:
         self.wv_psd_path = os.path.join(self.convert_file_pth, "wavevector_psd.csv")
         self.wv_psd_perfect_path = os.path.join(self.convert_file_pth, "wavevector_psd_perfect.csv")
         self.rms_path = os.path.join(self.convert_file_pth, "rms.csv")
-        if self.__is_wv_psd_file_exit() is True and rerun is False:
+        if self.__is_rms_wv_psd_file_exit() is True and rerun is False:
             self.af_wv_psd = np.genfromtxt(self.wv_psd_path, delimiter=",")
             self.af_wv_psd_perfect = np.genfromtxt(self.wv_psd_perfect_path, delimiter=",")
             self.rms = np.genfromtxt(self.rms_path, delimiter=",")
@@ -38,7 +38,7 @@ class ExtractedData:
                 int(self.af_wv_psd.shape[1] / 2),
                 int(self.af_wv_psd.shape[0])))
 
-    def __is_wv_psd_file_exit(self):
+    def __is_rms_wv_psd_file_exit(self):
         psd_file = len([name for name in os.listdir(self.convert_file_pth)
                         if name.startswith('wavevector_psd') or name.startswith("rms")])
         if psd_file == 3:
@@ -58,6 +58,7 @@ class ExtractedData:
         af_wv_psd_perfect = np.array([])
         rms = np.array([])
         for frame in range(no_frame):
+            print("Frame: {}".format(frame))
             # Load file:
             convert_file = os.path.join(self.convert_file_pth, st_wth_name_con)
             data_convert = np.genfromtxt(convert_file.format(frame), delimiter=",")
@@ -75,8 +76,8 @@ class ExtractedData:
             af_wv_psd_perfect = np.append(af_wv_psd_perfect, group_wavevector_psd_perfect)
 
             # Calculate root mean square
-            group_rms = group_segment.cal_root_mean_square_old(self.rms_length_list)
-            # group_rms = group_segment.cal_root_mean_square_old_old()
+            # group_rms = group_segment.cal_root_mean_square(self.rms_length_list)
+            group_rms = group_segment.cal_root_mean_square_old_old()
             rms = np.append(rms, group_rms)
 
             if self.no_component is None:
@@ -92,8 +93,8 @@ class ExtractedData:
 
         rms = rms.reshape(no_frame, -1)
         rms = np.mean(rms, axis=0)
-        rms = rms.reshape(-1, self.rms_len).T
-        # rms = rms.reshape(-1, self.no_component-1).T
+        # rms = rms.reshape(-1, self.rms_len).T
+        rms = rms.reshape(-1, self.no_component-1).T
 
         self.save_csv_file(af_wv_psd, self.wv_psd_path)
         self.save_csv_file(af_wv_psd_perfect, self.wv_psd_perfect_path)
