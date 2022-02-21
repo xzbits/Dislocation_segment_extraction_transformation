@@ -118,7 +118,60 @@ class GroupSegments:
 
         return group_wv_psd, group_wv_psd_perfect
 
-    def cal_root_mean_square(self):
+    def cal_root_mean_square(self, a_var=None):
+        if a_var is None:
+            a_var = [0.9999, 1 / 2, 1 / 4, 1 / 8, 1 / 16, 1 / 32, 1/64, 1/108]
+        length_list = [int(element * self.no_component) for element in a_var]
+        group_rms = list()
+        for one_group in self.group_segment:
+            segments_rms = list()
+            for one_segment in one_group:
+                one_segment_rms = list()
+                one_segment_yy = list()
+                x_array = one_segment[:, 0]
+                y_array = one_segment[:, 1]
+                h_rms = np.sum(x_array ** 2) / self.no_component
+                grid_spacing = y_array[1] - y_array[0]
+                # for i in range(a, self.no_component):
+                for i in length_list:
+                    accum_val = 0.0
+                    for j in range(0, self.no_component - i):
+                        first_term = x_array[j]
+                        second_term = x_array[j + i]
+                        accum_val += abs(first_term * second_term)
+                    print(h_rms - (accum_val/(self.no_component - i)))
+                    one_segment_rms.append(np.sqrt(h_rms - (accum_val/(self.no_component - i))))
+                    one_segment_yy.append(i * grid_spacing)
+                segments_rms.append((one_segment_rms, one_segment_yy))
+            group_rms.append(segments_rms)
+        return group_rms
+
+    def cal_root_mean_square_old(self, a_var=None):
+        if a_var is None:
+            a_var = [0.9999, 1 / 2, 1 / 4, 1 / 8, 1 / 16, 1 / 32, 1/64, 1/108]
+        length_list = [int(element * self.no_component) for element in a_var]
+        group_rms = list()
+        for one_group in self.group_segment:
+            segments_rms = list()
+            for one_segment in one_group:
+                one_segment_rms = list()
+                one_segment_yy = list()
+                x_array = one_segment[:, 0]
+                y_array = one_segment[:, 1]
+                grid_spacing = y_array[1] - y_array[0]
+                for i in length_list:
+                    accum_val = 0.0
+                    for j in range(0, self.no_component - i):
+                        first_term = x_array[j]
+                        second_term = x_array[j + i]
+                        accum_val += abs(first_term - second_term)
+                    one_segment_rms.append(accum_val/(self.no_component - i))
+                    one_segment_yy.append(i * grid_spacing)
+                segments_rms.append((one_segment_rms, one_segment_yy))
+            group_rms.append(segments_rms)
+        return group_rms
+
+    def cal_root_mean_square_old_old(self):
         group_rms = list()
         a = 1
         for one_group in self.group_segment:
@@ -132,8 +185,8 @@ class GroupSegments:
                 for i in range(a, self.no_component):
                     accum_val = 0.0
                     for j in range(0, self.no_component - i):
-                        first_term = x_array[j + 1]
-                        second_term = x_array[j]
+                        first_term = x_array[j]
+                        second_term = x_array[j+i]
                         accum_val += abs(first_term - second_term)
                     one_segment_rms.append(accum_val/(self.no_component - i))
                     one_segment_yy.append(i * grid_spacing)

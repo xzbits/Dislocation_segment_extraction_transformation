@@ -8,7 +8,12 @@ import os
 
 class ExtractedData:
     def __init__(self, convert_file_pth, file_suffix, rerun=False, group_by_axes=2, sort_by_axes=0,
-                 no_segment_per_group=2, length_lower_threshold=None):
+                 no_segment_per_group=2, length_lower_threshold=None, rms_length_list=None):
+        self.rms_length_list = rms_length_list
+        if self.rms_length_list is None:
+            self.rms_len = 8
+        else:
+            self.rms_len = rms_length_list.__len__()
         self.convert_file_pth = convert_file_pth
         self.file_suffix = file_suffix
         self.group_by_axes = group_by_axes
@@ -34,8 +39,9 @@ class ExtractedData:
                 int(self.af_wv_psd.shape[0])))
 
     def __is_wv_psd_file_exit(self):
-        psd_file = len([name for name in os.listdir(self.convert_file_pth) if name.startswith('wavevector_psd')])
-        if psd_file == 2:
+        psd_file = len([name for name in os.listdir(self.convert_file_pth)
+                        if name.startswith('wavevector_psd') or name.startswith("rms")])
+        if psd_file == 3:
             return True
         else:
             return False
@@ -69,7 +75,8 @@ class ExtractedData:
             af_wv_psd_perfect = np.append(af_wv_psd_perfect, group_wavevector_psd_perfect)
 
             # Calculate root mean square
-            group_rms = group_segment.cal_root_mean_square()
+            group_rms = group_segment.cal_root_mean_square_old(self.rms_length_list)
+            # group_rms = group_segment.cal_root_mean_square_old_old()
             rms = np.append(rms, group_rms)
 
             if self.no_component is None:
@@ -85,7 +92,8 @@ class ExtractedData:
 
         rms = rms.reshape(no_frame, -1)
         rms = np.mean(rms, axis=0)
-        rms = rms.reshape(-1, self.no_component - 1).T
+        rms = rms.reshape(-1, self.rms_len).T
+        # rms = rms.reshape(-1, self.no_component-1).T
 
         self.save_csv_file(af_wv_psd, self.wv_psd_path)
         self.save_csv_file(af_wv_psd_perfect, self.wv_psd_perfect_path)
