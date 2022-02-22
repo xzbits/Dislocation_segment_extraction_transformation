@@ -5,10 +5,11 @@ import os
 
 class MultipleTemperature:
     def __init__(self, plot_path, dir_suffix, csv_file_suffix, length_lower_threshold=None, rms_length_list=None,
-                 start_idx=None, last_idx=None, temp_list=None):
+                 rerun=False, start_idx=None, last_idx=None, temp_list=None):
         self.plot_path = plot_path
         self.dir_suffix = dir_suffix
         self.csv_file_suffix = csv_file_suffix
+        self.rerun = rerun
         self.start_idx = start_idx
         self.last_idx = last_idx
         self.temp_list = temp_list
@@ -37,6 +38,7 @@ class MultipleTemperature:
                                         group_by_axes=2,
                                         sort_by_axes=0,
                                         no_segment_per_group=2,
+                                        rerun=self.rerun,
                                         length_lower_threshold=self.length_lower_threshold,
                                         rms_length_list=self.rms_length_list)
 
