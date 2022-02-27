@@ -52,7 +52,7 @@ class Wrapper:
 
 
 class DumpDirectory:
-    def __init__(self, path, save_path, temperature_desire=None):
+    def __init__(self, path, save_path, dump_file_suffix, temperature_desire=None):
         """
         IMPORTANT NOTE: An dump folder must have one type of file name.
         :param path: Dump files path
@@ -60,6 +60,7 @@ class DumpDirectory:
         self.temperature_desire = temperature_desire
         self.path = path
         self.save_path = save_path
+        self.dump_file_suffix = dump_file_suffix
         self.files_list = os.listdir(self.path)
         self.file_name_type = self.classify_file_name(self.files_list[0])
         if self.file_name_type == -1:
@@ -132,7 +133,7 @@ class DumpDirectory:
 
     def extract_pipeline_raw(self):
         for temp in self.temperature_desire:
-            pipeline_path = os.path.join(self.path, "dump.dislocation_{}_*.cfg".format(temp))
+            pipeline_path = os.path.join(self.path, self.dump_file_suffix + "{}_*.cfg".format(temp))
             save_path = os.path.join(self.save_path, "extracted_wrapped_data_raw", "t_{}".format(temp))
 
             pipeline = import_file(pipeline_path)
@@ -214,11 +215,11 @@ class DumpDirectory:
             if self.file_name_type == 0:
                 for temp in self.temperature_list:
                     print("Temperature: {}".format(temp))
-                    pipelines_path = os.path.join(self.path, "dump.dislocation_{}_*.cfg".format(temp))
+                    pipelines_path = os.path.join(self.path, self.dump_file_suffix + "{}_*.cfg".format(temp))
                     save_path = os.path.join(self.save_path, "extracted_data", "t_{}".format(temp))
                     self.extract_pipeline(pipelines_path, save_path)
             elif self.file_name_type == 1:
-                pipelines_path = os.path.join(self.path, "dump.dislocation_*.cfg")
+                pipelines_path = os.path.join(self.path, self.dump_file_suffix + "*.cfg")
                 save_path = os.path.join(self.save_path, "extracted_data")
                 self.extract_pipeline(pipelines_path, save_path)
             else:
@@ -227,7 +228,7 @@ class DumpDirectory:
             if isinstance(self.temperature_desire, list):
                 for temp in self.temperature_desire:
                     print("Temperature: {}".format(temp))
-                    pipelines_path = os.path.join(self.path, "dump.dislocation_{}_*.cfg".format(temp))
+                    pipelines_path = os.path.join(self.path, self.dump_file_suffix + "{}_*.cfg".format(temp))
                     save_path = os.path.join(self.save_path, "extracted_data", "t_{}".format(temp))
                     self.extract_pipeline(pipelines_path, save_path)
             else:
