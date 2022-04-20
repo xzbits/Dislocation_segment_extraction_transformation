@@ -31,7 +31,7 @@ class MultipleTemperature:
         output_list.sort()
         return output_list
 
-    def __get_wv_psd_rms(self, data, temp):
+    def __get_wv_psd_rms_hdfa(self, data, temp):
         # Generate or check the existing of wv_psd and rms csv file
         wv_psd_rms_data = ExtractedData(convert_file_pth=os.path.join(self.plot_path, self.dir_suffix + "%i" % temp),
                                         file_suffix=self.csv_file_suffix,
@@ -43,29 +43,29 @@ class MultipleTemperature:
                                         rms_length_list=self.rms_length_list)
 
         # Add wv, psd, and rms of "temp" temperature to "data"
+        temp_af_wv_psd = wv_psd_rms_data.af_wv_psd
+        temp_af_wv_psd_perfect = wv_psd_rms_data.af_wv_psd_perfect
+        temp_rms = wv_psd_rms_data.rms
+        temp_hdfa = wv_psd_rms_data.hdfa
         if self.start_idx is None or self.last_idx is None:
-            temp_af_wv_psd = wv_psd_rms_data.af_wv_psd
-            temp_af_wv_psd_perfect = wv_psd_rms_data.af_wv_psd_perfect
-            temp_rms = wv_psd_rms_data.rms
             data["t_{}_wv_psd".format(temp)] = temp_af_wv_psd
             data["t_{}_wv_psd_perfect".format(temp)] = temp_af_wv_psd_perfect
             data["t_{}_rms".format(temp)] = temp_rms
+            data["t_{}_hdfa".format(temp)] = temp_hdfa
         else:
-            temp_af_wv_psd = wv_psd_rms_data.af_wv_psd
-            temp_af_wv_psd_perfect = wv_psd_rms_data.af_wv_psd_perfect
-            temp_rms = wv_psd_rms_data.rms
             data["t_{}_wv_psd".format(temp)] = temp_af_wv_psd[self.start_idx:self.last_idx]
             data["t_{}_wv_psd_perfect".format(temp)] = temp_af_wv_psd_perfect[self.start_idx:self.last_idx]
             data["t_{}_rms".format(temp)] = temp_rms[self.start_idx:self.last_idx]
+            data["t_{}_hdfa".format(temp)] = temp_hdfa[self.start_idx:self.last_idx]
 
     def generate_wv_psd_templist(self):
         data = {}
         for temp in self.temp_list:
-            self.__get_wv_psd_rms(data, temp)
+            self.__get_wv_psd_rms_hdfa(data, temp)
         return data
 
     def generate_wv_psd(self):
         data = {}
         for temp in self.file_list:
-            self.__get_wv_psd_rms(data, temp)
+            self.__get_wv_psd_rms_hdfa(data, temp)
         return data
