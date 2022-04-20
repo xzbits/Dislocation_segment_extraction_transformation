@@ -1,4 +1,5 @@
 import numpy as np
+from src.hfda import measure
 
 
 class GroupSegments:
@@ -171,7 +172,7 @@ class GroupSegments:
             group_rms.append(segments_rms)
         return group_rms
 
-    def cal_root_mean_square_old_old(self):
+    def cal_acf(self):
         group_rms = list()
         a = 1
         for one_group in self.group_segment:
@@ -193,3 +194,15 @@ class GroupSegments:
                 segments_rms.append((one_segment_rms, one_segment_yy))
             group_rms.append(segments_rms)
         return group_rms
+
+    def cal_hfda(self):
+        group_hfda = list()
+        no_data = None
+        for one_group in self.group_segment:
+            segments_hdfa = list()
+            for one_segment in one_group:
+                no_data = np.floor(one_segment[:, 0].shape / 2).astype(int)
+                k, L, _ = measure(one_segment[:, 0], no_data)
+                segments_hdfa.append((k, L))
+            group_hfda.append(segments_hdfa)
+        return group_hfda, no_data
