@@ -8,6 +8,7 @@ from ovito.modifiers import DislocationAnalysisModifier
 from ovito.modifiers import AffineTransformationModifier
 from ovito.modifiers import WrapPeriodicImagesModifier
 from ovito.data import DislocationNetwork
+from multiprocessing import Process, cpu_count, current_process, Pool
 import os
 import re
 import numpy as np
@@ -64,7 +65,7 @@ class DumpDirectory:
         self.files_list = os.listdir(self.path)
         self.file_name_type = self.classify_file_name(self.files_list[0])
         if self.file_name_type == -1:
-            raise RuntimeError(self.files_list[0])
+            raise ValueError(self.files_list[0])
         self.re_term = self.get_re_term(self.files_list[0])
         if self.file_name_type == 0:
             self.temperature_list = self.extract_temperature_list()
@@ -158,7 +159,7 @@ class DumpDirectory:
                 np.savetxt(os.path.join(save_path, "segment_points_wrapped_raw_frame_{}.csv".format(i)),
                            segments_per_frame, delimiter=",")
 
-    def extract_pipeline(self, pipeline_path, save_path):
+    def extract_pipeline(self, pipeline_path, save_path, start=None, stop=None):
         pipeline = import_file(pipeline_path)
         modifier = DislocationAnalysisModifier(line_point_separation=0, line_smoothing_level=0)
         modifier.input_crystal_structure = DislocationAnalysisModifier.Lattice.FCC
@@ -170,7 +171,10 @@ class DumpDirectory:
         data = pipeline.compute()
         xlimit, ylimit, zlimit = self.get_simulation_box(data)
 
-        for i in range(pipeline.source.num_frames):
+        start_frame = 0 if start is None else start
+        end_frame = pipeline.source.num_frames if start is None else stop
+
+        for i in range(start_frame, end_frame):
             print("Frame: {}".format(i))
             data = pipeline.compute(i)
             segments_per_frame = np.array([[0, 0, 0]])
@@ -210,6 +214,14 @@ class DumpDirectory:
                 segments_con_per_frame = np.r_[segments_con_per_frame, np.array([[0, 0, 0]])]
             np.savetxt("{}/segment_points_con_frame_{}.csv".format(save_path, i), segments_con_per_frame, delimiter=",")
 
+    def get_dump_file_time_steps(self, dumpfile_list):
+        output = []
+        for file_name in dumpfile_list:
+            time_steps = int(re.findall(r"{}(\d+)_(\d+)".format(self.dump_file_suffix), file_name)[0][1])
+            output.append(time_steps)
+        output.sort()
+        return output
+
     def generate_csv(self):
         if self.temperature_desire is None:
             if self.file_name_type == 0:
@@ -234,6 +246,92 @@ class DumpDirectory:
             else:
                 raise RuntimeError("Please set temperature_desire type is list object")
 
+    def parallel_generate_csv(self, files, start, stop):
+        process_name = current_process().name
+        print("Starting %s" % process_name)
+        if isinstance(files, list):
+            if isinstance(start, int) == False or isinstance(stop, int) == False:
+                raise ValueError("start and step should be integer")
+
+            for temp in self.temperature_desire:
+                pipeline_path_list = [os.path.join(self.path, self.dump_file_suffix + "{}_{}.cfg".format(temp, dump))
+                                      for dump in files]
+                save_path = os.path.join(self.save_path, "extracted_data", "t_{}".format(temp))
+                self.extract_pipeline(pipeline_path_list, save_path, start=start, stop=stop)
+        else:
+            raise ValueError("the input should be None or a list or not clarified ")
+
+    def parallel_distribute(self, cur_no_cores=None):
+        if self.temperature_desire is not None:
+            for temp in self.temperature_desire:
+                print("Temperature: {}".format(temp))
+                cur_no_cores = cpu_count() if cur_no_cores is None else cur_no_cores
+                file_list = [name for name in os.listdir(self.path)
+                             if name.startswith(self.dump_file_suffix + "{}_".format(temp))]
+                no_files = len(file_list)
+                no_partition = no_files // cur_no_cores + 1 \
+                    if no_files % cur_no_cores > cur_no_cores / 2 or no_files < cur_no_cores \
+                    else no_files // cur_no_cores
+                timestep_list = self.get_dump_file_time_steps(file_list)
+                job_list = []
+                start_idx = 0
+                no_parallel_run = cur_no_cores if no_files > cur_no_cores else no_files
+                for i in range(no_parallel_run):
+                    stop_idx = start_idx + no_partition
+                    if i != cur_no_cores - 1:
+                        job_files = timestep_list[start_idx:stop_idx]
+                    else:
+                        job_files = timestep_list[start_idx:]
+
+                    if job_files.__len__() == 1:
+                        job_list.append(Process(name="Extracting a dump file %i" % (job_files[0]),
+                                                target=self.parallel_generate_csv,
+                                                args=(job_files, start_idx, stop_idx)))
+                    else:
+                        job_list.append(Process(name="Extracting %i dump files from %i to %i"
+                                                     % (len(job_files), job_files[0], job_files[-1]),
+                                                target=self.parallel_generate_csv,
+                                                args=(job_files, start_idx, stop_idx)))
+                    start_idx = stop_idx
+
+                for process in job_list:
+                    process.start()
+                for process in job_list:
+                    process.join()
+        else:
+            raise RuntimeError("Please clarify temperature_desire var")
+
+    def parallel_distribute_with_pool(self, cur_no_cores=None):
+        if self.temperature_desire is not None:
+            for temp in self.temperature_desire:
+                print("Temperature: {}".format(temp))
+                cur_no_cores = cpu_count() if cur_no_cores is None else cur_no_cores
+                file_list = [name for name in os.listdir(self.path)
+                             if name.startswith(self.dump_file_suffix + "{}_".format(temp))]
+                no_files = len(file_list)
+                no_partition = no_files // cur_no_cores + 1 \
+                    if no_files % cur_no_cores > cur_no_cores / 2 or no_files < cur_no_cores \
+                    else no_files // cur_no_cores
+                timestep_list = self.get_dump_file_time_steps(file_list)
+                job_list = []
+                start_idx = 0
+                no_parallel_run = cur_no_cores if no_files > cur_no_cores else no_files
+                pool_run = Pool(processes=no_parallel_run)
+                for i in range(no_parallel_run):
+                    stop_idx = start_idx + no_partition
+                    if i != cur_no_cores - 1:
+                        job_files = timestep_list[start_idx:stop_idx]
+                    else:
+                        job_files = timestep_list[start_idx:]
+
+                    job_list.append((job_files, start_idx, stop_idx))
+
+                    start_idx = stop_idx
+
+                pool_run.starmap(self.parallel_generate_csv, job_list)
+        else:
+            raise RuntimeError("Please clarify temperature_desire var")
+
     def create_dir(self):
         # Create extracted_data directory
         path_extract = os.path.join(self.save_path, "extracted_data")
@@ -257,7 +355,7 @@ class DumpDirectory:
             elif self.file_name_type == 1:
                 pass
             else:
-                raise RuntimeError("Cannot recognize the type of dump file names!!!!!!!")
+                raise ValueError("Cannot recognize the type of dump file names!!!!!!!")
         else:
             # Create extracted_data sub-directory
             if self.file_name_type == 0:
@@ -272,4 +370,4 @@ class DumpDirectory:
             elif self.file_name_type == 1:
                 pass
             else:
-                raise RuntimeError("Cannot recognize the type of dump file names!!!!!!!")
+                raise ValueError("Cannot recognize the type of dump file names!!!!!!!")
