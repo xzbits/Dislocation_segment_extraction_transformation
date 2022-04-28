@@ -25,7 +25,7 @@ class ExtractedData:
         # Data save path
         self.wv_psd_path = os.path.join(self.convert_file_pth, "wavevector_psd.csv")
         self.wv_psd_perfect_path = os.path.join(self.convert_file_pth, "wavevector_psd_perfect.csv")
-        self.rms_path = os.path.join(self.convert_file_pth, "rms.csv")
+        self.rms_path = os.path.join(self.convert_file_pth, "ACF.csv")
         self.hdfa_path = os.path.join(self.convert_file_pth, "hdfa.csv")
 
         # Check Wave vector and PSD file available
@@ -55,7 +55,7 @@ class ExtractedData:
                 int(self.af_wv_psd.shape[0])))
 
     def __is_acf_file_exit(self):
-        psd_file = len([name for name in os.listdir(self.convert_file_pth) if name.startswith("rms")])
+        psd_file = len([name for name in os.listdir(self.convert_file_pth) if name.startswith("ACF")])
         if psd_file == 1:
             return True
         else:
