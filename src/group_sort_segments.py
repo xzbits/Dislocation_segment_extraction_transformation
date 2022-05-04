@@ -188,8 +188,8 @@ class GroupSegments:
                     for j in range(0, self.no_component - i):
                         first_term = x_array[j]
                         second_term = x_array[j+i]
-                        accum_val += abs(first_term - second_term)
-                    one_segment_rms.append(accum_val/(self.no_component - i))
+                        accum_val += (first_term - second_term)**2
+                    one_segment_rms.append(0.5 * accum_val/(self.no_component - i))
                     one_segment_yy.append(i * grid_spacing)
                 segments_rms.append((one_segment_rms, one_segment_yy))
             group_rms.append(segments_rms)
